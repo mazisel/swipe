@@ -1,25 +1,33 @@
 {
   "expo": {
     "name": "Swipe",
-    "slug": "Swipe",
+    "slug": "swipe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#23251F",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "Swipe — Keşfetmenin yeni hali"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-video",
+      "expo-secure-store"
+    ],
+    "scheme": "swipe",
+    "backgroundColor": "#0A0B0D"
   }
 }

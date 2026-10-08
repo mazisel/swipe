@@ -1,0 +1,43 @@
+# Portainer Docker Standalone stack: prebuilt GHCR images; no bind mounts/build.
+services:
+  api:
+    image: ${SWIPE_IMAGE_PREFIX:?Set SWIPE_IMAGE_PREFIX}-api:${SWIPE_TAG:-latest}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 3m
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DATABASE_CA_CERT: ${DATABASE_CA_CERT:-}
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-product-media}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AI_MONTHLY_BUDGET_USD: ${AI_MONTHLY_BUDGET_USD:-25}
+      AI_WORKER: ${AI_WORKER:-true}
+      FEED_PERSONALIZED: ${FEED_PERSONALIZED:-true}
+      SEED_DEMO: "false"
+      CHECKOUT_MODE: ${CHECKOUT_MODE:-demo}
+      ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
+      TRUST_PROXY_HOPS: "1"
+    networks: [swipe]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  web:
+    image: ${SWIPE_IMAGE_PREFIX:?Set SWIPE_IMAGE_PREFIX}-web:${SWIPE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "${SWIPE_BIND_IP:-127.0.0.1}:${SWIPE_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [swipe]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  swipe:

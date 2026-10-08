@@ -1,0 +1,18 @@
+CREATE SCHEMA IF NOT EXISTS swipe;
+REVOKE ALL ON SCHEMA swipe FROM PUBLIC;
+CREATE EXTENSION IF NOT EXISTS vector;
+SET search_path TO swipe, public, extensions;
+CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL, password TEXT NOT NULL, shop TEXT);
+CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS shop_profiles (user_id TEXT PRIMARY KEY REFERENCES users(id), bio TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, seller_id TEXT NOT NULL REFERENCES users(id), data TEXT NOT NULL CHECK(jsonb_typeof(data::jsonb)='object'), stock INTEGER NOT NULL CHECK(stock>=0));
+CREATE INDEX IF NOT EXISTS products_seller ON products(seller_id);
+CREATE TABLE IF NOT EXISTS uploads (url TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), type TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), request_key TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(user_id,request_key));
+CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, product_id TEXT NOT NULL REFERENCES products(id), user_id TEXT NOT NULL REFERENCES users(id), body TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS comments_product ON comments(product_id);
+CREATE TABLE IF NOT EXISTS reviews (id TEXT PRIMARY KEY, product_id TEXT NOT NULL REFERENCES products(id), user_id TEXT NOT NULL REFERENCES users(id), rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5), body TEXT NOT NULL, purchase_type TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(product_id,user_id));
+CREATE TABLE IF NOT EXISTS conversations (id TEXT PRIMARY KEY, product_id TEXT NOT NULL REFERENCES products(id), buyer_id TEXT NOT NULL REFERENCES users(id), seller_id TEXT NOT NULL REFERENCES users(id), buyer_read BIGINT NOT NULL DEFAULT 0, seller_read BIGINT NOT NULL DEFAULT 0, UNIQUE(product_id,buyer_id));
+CREATE TABLE IF NOT EXISTS messages (id BIGSERIAL PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id), sender_id TEXT NOT NULL REFERENCES users(id), body TEXT NOT NULL, request_key TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(conversation_id,sender_id,request_key));
+CREATE INDEX IF NOT EXISTS messages_conversation ON messages(conversation_id,id);

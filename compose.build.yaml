@@ -1,0 +1,10 @@
+# Optional local/server builds: combine with compose.yaml.
+services:
+  api:
+    build:
+      context: .
+      target: api
+  web:
+    build:
+      context: .
+      target: web

@@ -39,3 +39,19 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local marketplace data and secrets
+server/data/
+.env
+.env.local
+*.db
+*.db-shm
+*.db-wal
+
+# Deployment secrets
+.env.*
+!.env.example
+deploy/stack.env
+
+# Local UI captures may contain account information
+docs/screenshots/

@@ -1,0 +1,27 @@
+*
+!package.json
+!package-lock.json
+!app.json
+!tsconfig.json
+!eslint.config.js
+!src/
+!src/**
+!shared/
+!shared/**
+!assets/
+!assets/**
+!server/
+!server/*.mjs
+!server/discovery/
+!server/discovery/**
+!server/migrations/
+!server/migrations/**
+!server/certs/
+!server/certs/prod-ca-2021.crt
+!scripts/
+!scripts/grant-admin.mjs
+!deploy/
+!deploy/nginx.conf
+!deploy/entrypoint.mjs
+!Dockerfile
+# No .env, Git history, local backups, database or screenshots enter the context.

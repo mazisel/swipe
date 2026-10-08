@@ -1,0 +1,23 @@
+export type Category = 'Tümü' | 'Giyim' | 'Çanta' | 'Ayakkabı' | 'Aksesuar' | 'Yaşam';
+export type ProductMedia = { url: string; type: 'image' | 'video'; poster?: string };
+export type Product = {
+  id: string; sellerId: string; shop: string; title: string; description: string;
+  price: number; category: Category; media: string; mediaType: 'image' | 'video';
+  poster: string; sizes: string[]; stock: number; color: string; createdAt: string;
+  gallery?: ProductMedia[];
+  likeCount?: number; commentCount?: number; reviewCount?: number; ratingAverage?: number;
+};
+export type User = { id: string; name: string; email: string; shop: string | null; shopBio?: string };
+export type CartItem = { productId: string; size: string; quantity: number };
+export type Order = { id: string; total: number; status: 'demo'; createdAt: string; items: { productId: string; title: string; shop: string; size: string; quantity: number; price: number }[] };
+export type Comment = { id: string; userId: string; name: string; body: string; createdAt: string };
+export type Review = Comment & { rating: number; purchaseType: 'demo' };
+export type Message = { id: number; senderId: string; body: string; createdAt: string };
+export type Conversation = { id: string; productId: string; productTitle: string; peerName: string; peerRead: number; unread: number; lastMessage: Message | null };
+export const categories: Category[] = ['Tümü', 'Giyim', 'Çanta', 'Ayakkabı', 'Aksesuar', 'Yaşam'];
+export const money = (cents: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+export type FeedIdentity = { actorId: string; generation: number; token?: string };
+export type FollowedShop = { id: string; name: string; bio: string };
+export type FeedReason = { code: string; text: string };
+export type FeedPage = { reasons?: Record<string, FeedReason>; items: Product[]; nextCursor: string | null; sessionId: string; algorithmVersion: string; generation: number };
+export type FeedEvent = { id: string; productId: string; kind: 'view' | 'progress' | 'finish' | 'detail' | 'save' | 'cart' | 'search_select'; sessionId?: string; impressionId?: string; endReason?: 'swipe' | 'pause'; durationMs?: number; completion?: number; loops?: number };
