@@ -87,7 +87,7 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-60 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
+61 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
 
 6 Ekim 2026 kontrolünde Expo Doctor 21/21 geçti. `npm audit`, Expo/Metro ve yönlendiricinin geçişli bağımlılıklarında 28 uyarı (18 yüksek, 10 orta) bildirdi. Registry'de `braces` ve `node-forge` için uyumlu yeni yama henüz bulunmadı; `npm audit fix --force` uyumsuz framework sürümleri önerdiği için uygulanmadı. Üretim öncesi tekrar değerlendirilmeli; geliştirme sunucusu internete açılmamalı.
 

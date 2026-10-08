@@ -139,7 +139,13 @@ export async function createApp({ accountSecurity, dbPath, databaseUrl = process
     res.json({ user: { ...(await safeUser(req.user)), shop: data.name, shopBio: data.bio } });
   });
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
-  app.post('/api/uploads', auth, seller, upload.single('file'), async (req, res) => {
+  const adminShop = async (req,res,next) => {
+    const shop=await db.prepare('SELECT id,shop FROM users WHERE id=? AND shop IS NOT NULL').get(req.params.id);
+    if(!shop)throw fail(404,'Mağaza bulunamadı.');
+    if(await db.prepare('SELECT 1 FROM account_moderation WHERE user_id=? AND suspended').get(shop.id))throw fail(409,'Askıdaki mağazaya ürün yüklenemez.');
+    req.catalogOwner=shop;next();
+  };
+  const uploadMedia = async (req, res) => {
     const data = req.file?.buffer;
     if (!data) throw fail(400, 'Bir fotoğraf veya video seç.');
     let ext, type;
@@ -151,28 +157,33 @@ export async function createApp({ accountSecurity, dbPath, databaseUrl = process
     const filename = `${randomUUID()}.${ext}`;
     const asset = await storage.put(filename, data);
     const url = asset.url;
-    (await db.prepare('INSERT INTO uploads VALUES (?, ?, ?)').run(url, req.user.id, type));
+    (await db.prepare('INSERT INTO uploads VALUES (?, ?, ?)').run(url, (req.catalogOwner||req.user).id, type));
     await db.prepare('INSERT INTO media_assets(url,content_hash,mime,size_bytes) VALUES (?,?,?,?) ON CONFLICT DO NOTHING').run(url, digest(data), asset.mime, data.length);
     res.status(201).json({ url, type });
-  });
-  app.post('/api/products', auth, seller, async (req, res) => {
+  };
+  app.post('/api/uploads', auth, seller, upload.single('file'), uploadMedia);
+  app.post('/api/admin/shops/:id/uploads', adminShop, upload.single('file'), uploadMedia);
+  const publishProduct = async (req, res) => {
     const data = input(z.object({ title: text(3, 100), description: text(10, 2000), price: z.number().int().min(100).max(100000000), category: z.enum(['Giyim', 'Çanta', 'Ayakkabı', 'Aksesuar', 'Yaşam']), media: text(1, 1000).optional(), gallery: z.array(text(1, 1000)).min(1).max(6).optional(), sizes: z.array(text(1, 20)).min(1).max(15), stock: z.number().int().min(1).max(10000), color: text(1, 40) }), req.body);
     const urls = data.gallery || (data.media ? [data.media] : []);
     if (!urls.length || new Set(urls).size !== urls.length) throw fail(400, '1–6 farklı fotoğraf veya video seç.');
     const gallery = [];
     for (const url of urls) {
-      const asset = await db.prepare('SELECT * FROM uploads WHERE url=? AND user_id=?').get(url, req.user.id);
+      const asset = await db.prepare('SELECT * FROM uploads WHERE url=? AND user_id=?').get(url, (req.catalogOwner||req.user).id);
       if (!asset) throw fail(400, 'Kendi yüklediğin bir fotoğraf veya video seç.');
       gallery.push({ url: asset.url, type: asset.type, poster: '' });
     }
-    const product = { ...data, gallery, media: gallery[0].url, id: randomUUID(), sellerId: req.user.id, shop: req.user.shop, mediaType: gallery[0].type, poster: '', sizes: [...new Set(data.sizes)], createdAt: new Date().toISOString() };
+    const product = { ...data, gallery, media: gallery[0].url, id: randomUUID(), sellerId: (req.catalogOwner||req.user).id, shop: (req.catalogOwner||req.user).shop, mediaType: gallery[0].type, poster: '', sizes: [...new Set(data.sizes)], createdAt: new Date().toISOString() };
     await db.transaction(async () => {
-      await db.prepare('INSERT INTO products VALUES (?, ?, ?, ?)').run(product.id, req.user.id, JSON.stringify(product), data.stock);
+      await db.prepare('INSERT INTO products VALUES (?, ?, ?, ?)').run(product.id, (req.catalogOwner||req.user).id, JSON.stringify(product), data.stock);
       await enqueueAnalysis(db, product);
       await notifyFollowers(db,product);
+      if(req.catalogOwner)await db.prepare('INSERT INTO admin_audit(id,admin_id,action,target_id,reason) VALUES (?,?,?,?,?)').run(randomUUID(),req.user.id,'product:create',product.id,`Mağaza adına ürün: ${product.sellerId}`);
     });
     res.status(201).json({ product });
-  });
+  };
+  app.post('/api/products', auth, seller, publishProduct);
+  app.post('/api/admin/shops/:id/products', adminShop, publishProduct);
   app.get('/api/orders', auth, async (req, res) => res.json({ orders: (await db.prepare(`SELECT o.data,${shippingSql} AS shipping,${shipmentListSql} AS shipments FROM orders o LEFT JOIN order_shipping s ON s.order_id=o.id WHERE o.user_id=? ORDER BY (o.data::jsonb->>'createdAt') DESC`).all(req.user.id)).map(row => ({...JSON.parse(row.data),shipping:row.shipping,shipments:row.shipments})) }));
   app.post('/api/checkout', auth, async (req, res) => {
     if (!demo) throw fail(503, 'Gerçek ödeme henüz etkin değil. Ödeme sağlayıcısı bağlantısı gerekiyor.');

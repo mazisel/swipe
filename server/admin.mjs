@@ -5,6 +5,16 @@ import { installShipping, shippingSql, shipmentListSql } from './shipping.mjs';
 export function installAdmin({app,db,auth,fail,input}) {
  const guard=async(req,res,next)=>{if(!(await db.prepare('SELECT 1 FROM admin_roles WHERE user_id=?').get(req.user.id)))throw fail(403,'Bu hesap yönetici yetkisine sahip değil.');res.set('Cache-Control','no-store');next();};
  app.use('/api/admin',auth,guard);
+ app.post('/api/admin/shops',async(req,res)=>{
+  const v=input(z.object({name:z.string().trim().min(2).max(60),bio:z.string().trim().max(500).default('')}).strict(),req.body);
+  const id=randomUUID();
+  await db.transaction(async()=>{
+   // Internal account has no password and no deliverable email; it cannot sign in or reset a password.
+   await db.prepare('INSERT INTO users(id,email,name,password,shop) VALUES (?,?,?,?,?)').run(id,`${id}@managed.swipe.invalid`,v.name,'',v.name);
+   await db.prepare('INSERT INTO shop_profiles(user_id,bio) VALUES (?,?)').run(id,v.bio);
+   await db.prepare('INSERT INTO admin_audit(id,admin_id,action,target_id,reason) VALUES (?,?,?,?,?)').run(randomUUID(),req.user.id,'shop:create',id,'Yönetim tarafından oluşturuldu');
+  });res.status(201).json({shop:{id,name:v.name,bio:v.bio}});
+ });
  installReportAdmin({app,db,input,fail});
  installShipping({app,db,fail,input});
  app.get('/api/admin/overview',async(req,res)=>{
@@ -16,8 +26,8 @@ export function installAdmin({app,db,auth,fail,input}) {
   const kind=input(z.enum(['users','shops','products','orders','jobs','audit','reports']),req.params.kind);
   const {q,page}=input(z.object({q:z.string().max(100).default(''),page:z.coerce.number().int().min(0).max(100000).default(0)}),req.query);
   const definitions={
-   users:`SELECT u.id,u.name AS title,u.email AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,COALESCE(u.shop,'Alıcı') AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id`,
-   shops:`SELECT u.id,u.shop AS title,u.email AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,(SELECT count(*)::text || ' ürün' FROM products p WHERE p.seller_id=u.id) AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id WHERE u.shop IS NOT NULL`,
+   users:`SELECT u.id,u.name AS title,CASE WHEN u.email LIKE '%@managed.swipe.invalid' AND u.password='' THEN 'Yönetim tarafından yönetiliyor' ELSE u.email END AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,COALESCE(u.shop,'Alıcı') AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id`,
+   shops:`SELECT u.id,u.shop AS title,CASE WHEN u.email LIKE '%@managed.swipe.invalid' AND u.password='' THEN 'Yönetim tarafından yönetiliyor' ELSE u.email END AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,(SELECT count(*)::text || ' ürün' FROM products p WHERE p.seller_id=u.id) AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id WHERE u.shop IS NOT NULL`,
    products:`SELECT p.id,p.data::jsonb->>'title' AS title,u.shop AS subtitle,CASE WHEN m.hidden THEN 'Gizli' WHEN a.suspended THEN 'Mağaza askıda' WHEN p.stock=0 THEN 'Stoksuz' ELSE 'Yayında' END AS status,p.stock::text || ' adet · ' || ((p.data::jsonb->>'price')::numeric/100)::numeric(14,2)::text || ' TL' AS meta FROM products p JOIN users u ON u.id=p.seller_id LEFT JOIN product_moderation m ON m.product_id=p.id LEFT JOIN account_moderation a ON a.user_id=u.id`,
    orders:`SELECT o.id,o.id AS title,u.name AS subtitle,'Demo' AS status,((o.data::jsonb->>'total')::numeric/100)::numeric(14,2)::text || ' TL · ' || (o.data::jsonb->>'createdAt') AS meta,${shippingSql} AS shipping,${shipmentListSql} AS shipments FROM orders o JOIN users u ON u.id=o.user_id LEFT JOIN order_shipping s ON s.order_id=o.id`,
    jobs:`SELECT j.id,p.data::jsonb->>'title' AS title,COALESCE(j.last_error,CASE WHEN j.status='done' THEN 'Görsel analiz tamamlandı' ELSE 'Analiz kuyruğu' END) AS subtitle,j.status,j.attempts::text || ' deneme' AS meta,c.features AS analysis,c.created_at AS analyzed_at FROM ai_jobs j JOIN products p ON p.id=j.product_id LEFT JOIN ai_cache c ON c.cache_key=j.cache_key AND j.status='done'`,

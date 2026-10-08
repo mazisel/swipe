@@ -36,3 +36,11 @@ Panelin tüm bölümleri, giriş ekranı, tablolar ve moderasyon pencereleri siy
 AI analizlerinde “Etiketler ve açıklama” alanı açılarak ürün türü, stil, renk, kullanım bağlamı ve görsel açıklama görülebilir. Arama analiz etiketlerini de kapsar. Çıktılar ilgili tamamlanmış işin önbellek kaydından okunur; eski işte yeni ürün analizinin gösterilmesi engellenir. Bekleyen/başarısız işler için durum açıklanır; bu ekran AI çağrısı başlatmaz.
 
 Siparişler bölümünden [kargo bilgisi](SHIPPING.md) düzenlenebilir; durum, firma ve takip numarası alıcının siparişlerinde görünür.
+
+## Yönetim adına mağaza ve ürün oluşturma
+
+Mağazalar → Mağaza oluştur ile ad ve açıklama girilir. Yeni mağaza ayrı bir dahili kimlik alır; yöneticinin kendi hesabı mağazaya dönüştürülmez. Satıcı giriş hesabı veya şifre oluşturulmaz; bu sürüm mağazayı satıcıya devretmez ve mağaza adına DM yanıtlama sağlamaz.
+
+Oluşturma sonrası ürün formu açılır. Mevcut mağazaların satırındaki Ürün ekle de aynı formu açar. En fazla altı fotoğraf/video yüklenebilir; kapak seçilebilir. Fiyat TL olarak girilir, sunucuda kuruş tutulur. Ürün seçilen mağazaya ait olur, AI analiz kuyruğuna girer ve takipçilerine bildirim üretir. Askıdaki mağazaya yükleme yapılamaz.
+
+Medya yükleme ve yayımlama admin yetkisi gerektirir; başka mağazaya ait yükleme kullanılamaz. Mağaza/ürün oluşturma işlem geçmişine kaydedilir. Veritabanı şema değişikliği gerekmez.
