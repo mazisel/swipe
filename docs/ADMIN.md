@@ -32,3 +32,5 @@ Tasarım araştırması: Lazyweb'in herkese açık [dashboard kataloğu](https:/
 ## Siyah-beyaz tasarım
 
 Panelin tüm bölümleri, giriş ekranı, tablolar ve moderasyon pencereleri siyah/beyaz ve nötr gri tonlarına geçirildi. Daha küçük başlıklar, çizgi ikonları, tıklanabilir özet sayıları ve tüm alanlara hızlı erişim eklendi. AI durumları Türkçeleştirildi. Yetki ve moderasyon davranışları değişmedi. Araştırma: https://www.lazyweb.com/company/linear
+
+AI analizlerinde “Etiketler ve açıklama” alanı açılarak ürün türü, stil, renk, kullanım bağlamı ve görsel açıklama görülebilir. Arama analiz etiketlerini de kapsar. Çıktılar ilgili tamamlanmış işin önbellek kaydından okunur; eski işte yeni ürün analizinin gösterilmesi engellenir. Bekleyen/başarısız işler için durum açıklanır; bu ekran AI çağrısı başlatmaz.
