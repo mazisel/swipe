@@ -67,11 +67,15 @@ Yönetici paneli: **http://localhost:8082/admin** (yerel web sunucusu 8082 üzer
 
 `server/data/` yerel veri ve yüklemeleri içerir ve Git'e alınmaz. Mevcut gerçek kullanıcı hesabı veya sabit demo şifresi yoktur; UI'dan kendi yerel test hesabınızı oluşturabilirsiniz. Başlangıç kataloğu 5 mağazada 20 temsilî ürün içerir; 3 ürünün kapağı videodur. Fotoğraflar Unsplash, videolar Cloudinary üzerinde yayımlanmış demo kaynaklarıdır. Kaynaklar: [demo medya](server/demo-media/README.md). Canlı kullanımda kendi ürün medyanız ve gerekli kullanım hakları gerekir.
 
+## Hesap güvenliği
+
+Resend ile e-posta doğrulama ve tek kullanımlık bağlantıyla şifre sıfırlama hazır. Gönderim için sunucu yapılandırması gerekir; gerçek teslimat henüz denenmedi. [Kurulum ve güvenlik davranışı](docs/ACCOUNT_SECURITY.md).
+
 ## Ödeme sınırı
 
 Kullanıcının seçimiyle bu sürüm **demo ödeme** kullanır. Kart verisi alınmaz, para çekilmez, kargo oluşturulmaz ve stok düşmez. Demo alıcı/adres alanları doğrulanır fakat adres saklanmaz. `CHECKOUT_MODE=demo` olmadan (`npm run api`) checkout endpoint'i 503 döner. Gerçek ödeme sağlayıcısına gizli anahtar bağlanmış değildir.
 
-Canlı pazaryeri için iyzico/PayTR gibi sağlayıcıda pazaryeri/alt satıcı hesabı, sunucu tarafı ödeme ve webhook akışı, satıcı doğrulama, stok rezervasyonu, kargo/iade, e-posta doğrulama, şifre kurtarma, ürün moderasyonu, KVKK/sözleşmeler ve üretim altyapısı eklenmelidir. Bu yerel sürüm kamuya açık üretim dağıtımı için hazır değildir.
+Canlı pazaryeri için iyzico/PayTR gibi sağlayıcıda pazaryeri/alt satıcı hesabı, sunucu tarafı ödeme ve webhook akışı, satıcı doğrulama, stok rezervasyonu, kargo/iade, ürün moderasyonu, KVKK/sözleşmeler ve üretim altyapısı eklenmelidir. Bu yerel sürüm kamuya açık üretim dağıtımı için hazır değildir.
 
 ## Kontroller
 
@@ -83,7 +87,7 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-55 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
+57 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
 
 6 Ekim 2026 kontrolünde Expo Doctor 21/21 geçti. `npm audit`, Expo/Metro ve yönlendiricinin geçişli bağımlılıklarında 28 uyarı (18 yüksek, 10 orta) bildirdi. Registry'de `braces` ve `node-forge` için uyumlu yeni yama henüz bulunmadı; `npm audit fix --force` uyumsuz framework sürümleri önerdiği için uygulanmadı. Üretim öncesi tekrar değerlendirilmeli; geliştirme sunucusu internete açılmamalı.
 

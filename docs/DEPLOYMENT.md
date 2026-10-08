@@ -47,6 +47,8 @@ Mobil release için `EXPO_PUBLIC_API_URL=https://swipe.example.com` kullanılır
 
 ## 4. Kontrol ve güncelleme
 
+E-posta doğrulama ve şifre sıfırlama için `RESEND_API_KEY`, `MAIL_FROM` ve `PUBLIC_ORIGIN` ayarlarını gir: [Hesap güvenliği rehberi](ACCOUNT_SECURITY.md).
+
 ```sh
 curl --fail https://swipe.example.com/api/ready
 curl --fail https://swipe.example.com/api/health

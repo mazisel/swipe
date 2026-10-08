@@ -11,6 +11,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { seedProducts } from './seed.mjs';
 import { installAdmin } from './admin.mjs';
+import { installAccountSecurity } from './account-security.mjs';
 import { installSocial } from './social.mjs';
 import { installFeed } from './discovery/feed.mjs';
 import { createMediaStorage } from './storage.mjs';
@@ -23,7 +24,7 @@ const input = (schema, value) => { const result = schema.safeParse(value); if (!
 const text = (min, max) => z.string().trim().min(min, `En az ${min} karakter girin.`).max(max, `En fazla ${max} karakter girin.`);
 const credentials = z.object({ email: z.email('Geçerli bir e-posta girin.').max(254).transform(v => v.toLowerCase()), password: z.string().min(8, 'Şifre en az 8 karakter olmalı.').max(128) });
 
-export async function createApp({ dbPath, databaseUrl = process.env.DATABASE_URL, dataDir = 'server/data/postgres', uploadDir = 'server/data/uploads', seed = true, demo = false, origins = ['http://localhost:8081', 'http://127.0.0.1:8081'] } = {}) {
+export async function createApp({ accountSecurity, dbPath, databaseUrl = process.env.DATABASE_URL, dataDir = 'server/data/postgres', uploadDir = 'server/data/uploads', seed = true, demo = false, origins = ['http://localhost:8081', 'http://127.0.0.1:8081'] } = {}) {
   mkdirSync(uploadDir, { recursive: true });
   const db = await openDatabase({ databaseUrl, dataDir: dbPath === ':memory:' ? ':memory:' : dataDir });
   if (seed) for (const product of seedProducts) {
@@ -72,6 +73,7 @@ export async function createApp({ dbPath, databaseUrl = process.env.DATABASE_URL
     return { user: (await safeUser(user)), token };
   };
   installAdmin({ app, db, auth, fail, input });
+  installAccountSecurity({ app, db, auth, fail, input, ...accountSecurity });
   const productRows = async () => (await db.prepare(`SELECT products.*, users.shop AS shop_name,
     (SELECT COUNT(*) FROM product_likes WHERE product_id=products.id) AS like_count,
     (SELECT COUNT(*) FROM comments WHERE product_id=products.id) AS comment_count,
@@ -105,12 +107,15 @@ export async function createApp({ dbPath, databaseUrl = process.env.DATABASE_URL
   });
   app.post('/api/auth/login', authLimit, async (req, res) => {
     const data = input(credentials, req.body);
-    const user = (await db.prepare('SELECT * FROM users WHERE email=?').get(data.email));
+    const result = await db.transaction(async () => {
+    const user = (await db.prepare('SELECT * FROM users WHERE email=? FOR UPDATE').get(data.email));
     if (user && await db.prepare('SELECT 1 FROM account_moderation WHERE user_id=? AND suspended').get(user.id)) throw fail(403, 'Hesabın askıya alınmış.');
     const [salt, hash] = (user?.password || 'invalid:').split(':');
     const candidate = await derive(data.password, salt, 64);
     if (!hash || !timingSafeEqual(candidate, Buffer.from(hash, 'hex'))) throw fail(401, 'E-posta veya şifre doğru değil.');
-    res.json((await session(user)));
+    return session(user);
+    });
+    res.json(result);
   });
   app.get('/api/me', auth, async (req, res) => res.json({ user: (await safeUser(req.user)) }));
   app.post('/api/auth/logout', auth, async (req, res) => { (await db.prepare('DELETE FROM sessions WHERE hash=?').run(digest(req.headers.authorization.slice(7)))); res.json({ ok: true }); });

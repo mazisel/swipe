@@ -6,6 +6,9 @@ services:
     init: true
     stop_grace_period: 3m
     environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
       NODE_ENV: production
       PORT: "3001"
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}

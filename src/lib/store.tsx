@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, loadToken, saveToken } from './api';
+import { api, ApiError, loadToken, saveToken } from './api';
 import { initializeDiscovery, trackDiscovery, deferDiscovery, flushDiscovery, beginIdentityChange, finishIdentityChange, resetDiscovery, hideDiscovery } from './discovery';
 import { AppState } from 'react-native';
 import { CartItem, Product, User } from '../../shared/types';
@@ -116,7 +116,7 @@ function useStoreState() {
   async function logout() {
     await suspendLikes(); saveReceipts.current.clear();
     await beginIdentityChange();
-    try { await api('/auth/logout', {}); await saveToken(null); setUser(null); setCart([]); await finishIdentityChange(true); await loadLikes(); }
+    try { try { await api('/auth/logout', {}); } catch(e) { if(!(e instanceof ApiError) || ![401,403].includes(e.status))throw e; } await saveToken(null); setUser(null); setCart([]); await finishIdentityChange(true); await loadLikes(); }
     catch(e) { await finishIdentityChange().catch(() => {}); await loadLikes(); throw e; }
     finally { setFeedRevision(v => v + 1); }
   }
