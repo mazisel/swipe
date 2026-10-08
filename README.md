@@ -87,7 +87,7 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-57 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
+58 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
 
 6 Ekim 2026 kontrolünde Expo Doctor 21/21 geçti. `npm audit`, Expo/Metro ve yönlendiricinin geçişli bağımlılıklarında 28 uyarı (18 yüksek, 10 orta) bildirdi. Registry'de `braces` ve `node-forge` için uyumlu yeni yama henüz bulunmadı; `npm audit fix --force` uyumsuz framework sürümleri önerdiği için uygulanmadı. Üretim öncesi tekrar değerlendirilmeli; geliştirme sunucusu internete açılmamalı.
 
@@ -104,3 +104,5 @@ NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --port 8082 --localhost
 ```
 
 Simülatörde Expo Go'ya `exp://127.0.0.1:8082` adresini açın. Yerel API `npm run api:demo` ile 3001 portunda çalışmalıdır. Xcode Device Hub penceresini algılamada Expo CLI zaman aşımına uğrarsa sunucu ve simülatör ayrı başlatılabilir.
+
+Manuel kargo durumu, firma ve takip numarasi yonetimi: [Kargo rehberi](docs/SHIPPING.md).

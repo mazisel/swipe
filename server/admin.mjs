@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { installShipping, shippingSql } from './shipping.mjs';
 export function installAdmin({app,db,auth,fail,input}) {
  const guard=async(req,res,next)=>{if(!(await db.prepare('SELECT 1 FROM admin_roles WHERE user_id=?').get(req.user.id)))throw fail(403,'Bu hesap yönetici yetkisine sahip değil.');res.set('Cache-Control','no-store');next();};
  app.use('/api/admin',auth,guard);
+ installShipping({app,db,fail,input});
  app.get('/api/admin/overview',async(req,res)=>{
   const counts=(await db.query(`SELECT (SELECT count(*) FROM users) AS users,(SELECT count(*) FROM users WHERE shop IS NOT NULL) AS shops,(SELECT count(*) FROM products) AS products,(SELECT count(*) FROM orders) AS orders,(SELECT count(*) FROM product_likes) AS likes,(SELECT count(*) FROM product_moderation WHERE hidden) AS hidden,(SELECT count(*) FROM account_moderation WHERE suspended) AS suspended`)).rows[0];
   const budget=(await db.query("SELECT spent_micros,reserved_micros FROM ai_budgets WHERE month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM')")).rows[0]||{spent_micros:0,reserved_micros:0};
@@ -15,7 +17,7 @@ export function installAdmin({app,db,auth,fail,input}) {
    users:`SELECT u.id,u.name AS title,u.email AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,COALESCE(u.shop,'Alıcı') AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id`,
    shops:`SELECT u.id,u.shop AS title,u.email AS subtitle,CASE WHEN a.suspended THEN 'Askıda' ELSE 'Aktif' END AS status,(SELECT count(*)::text || ' ürün' FROM products p WHERE p.seller_id=u.id) AS meta FROM users u LEFT JOIN account_moderation a ON a.user_id=u.id WHERE u.shop IS NOT NULL`,
    products:`SELECT p.id,p.data::jsonb->>'title' AS title,u.shop AS subtitle,CASE WHEN m.hidden THEN 'Gizli' WHEN a.suspended THEN 'Mağaza askıda' WHEN p.stock=0 THEN 'Stoksuz' ELSE 'Yayında' END AS status,p.stock::text || ' adet · ' || ((p.data::jsonb->>'price')::numeric/100)::numeric(14,2)::text || ' TL' AS meta FROM products p JOIN users u ON u.id=p.seller_id LEFT JOIN product_moderation m ON m.product_id=p.id LEFT JOIN account_moderation a ON a.user_id=u.id`,
-   orders:`SELECT o.id,o.id AS title,u.name AS subtitle,'Demo' AS status,((o.data::jsonb->>'total')::numeric/100)::numeric(14,2)::text || ' TL · ' || (o.data::jsonb->>'createdAt') AS meta FROM orders o JOIN users u ON u.id=o.user_id`,
+   orders:`SELECT o.id,o.id AS title,u.name AS subtitle,'Demo' AS status,((o.data::jsonb->>'total')::numeric/100)::numeric(14,2)::text || ' TL · ' || (o.data::jsonb->>'createdAt') AS meta,${shippingSql} AS shipping FROM orders o JOIN users u ON u.id=o.user_id LEFT JOIN order_shipping s ON s.order_id=o.id`,
    jobs:`SELECT j.id,p.data::jsonb->>'title' AS title,COALESCE(j.last_error,CASE WHEN j.status='done' THEN 'Görsel analiz tamamlandı' ELSE 'Analiz kuyruğu' END) AS subtitle,j.status,j.attempts::text || ' deneme' AS meta,c.features AS analysis,c.created_at AS analyzed_at FROM ai_jobs j JOIN products p ON p.id=j.product_id LEFT JOIN ai_cache c ON c.cache_key=j.cache_key AND j.status='done'`,
    audit:`SELECT a.id::text,a.created_at,a.action AS title,u.name AS subtitle,'Kaydedildi' AS status,a.reason || ' · ' || a.target_id || ' · ' || a.created_at::text AS meta FROM admin_audit a JOIN users u ON u.id=a.admin_id`
   };

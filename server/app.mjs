@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { seedProducts } from './seed.mjs';
+import { shippingSql } from './shipping.mjs';
 import { installAdmin } from './admin.mjs';
 import { installAccountSecurity } from './account-security.mjs';
 import { installSocial } from './social.mjs';
@@ -167,7 +168,7 @@ export async function createApp({ accountSecurity, dbPath, databaseUrl = process
     });
     res.status(201).json({ product });
   });
-  app.get('/api/orders', auth, async (req, res) => res.json({ orders: (await db.prepare("SELECT data FROM orders WHERE user_id=? ORDER BY (data::jsonb->>'createdAt') DESC").all(req.user.id)).map(row => JSON.parse(row.data)) }));
+  app.get('/api/orders', auth, async (req, res) => res.json({ orders: (await db.prepare(`SELECT o.data,${shippingSql} AS shipping FROM orders o LEFT JOIN order_shipping s ON s.order_id=o.id WHERE o.user_id=? ORDER BY (o.data::jsonb->>'createdAt') DESC`).all(req.user.id)).map(row => ({...JSON.parse(row.data),shipping:row.shipping})) }));
   app.post('/api/checkout', auth, async (req, res) => {
     if (!demo) throw fail(503, 'Gerçek ödeme henüz etkin değil. Ödeme sağlayıcısı bağlantısı gerekiyor.');
     const data = input(z.object({ requestKey: z.uuid(), demoAcknowledged: z.literal(true, { error: 'Demo sipariş bilgisini onayla.' }), address: text(15, 500), name: text(2, 80), items: z.array(z.object({ productId: text(1, 100), size: text(1, 20), quantity: z.number().int().min(1).max(20) })).min(1).max(50) }), req.body);
