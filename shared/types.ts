@@ -20,5 +20,5 @@ export const money = (cents: number) => new Intl.NumberFormat('tr-TR', { style: 
 export type FeedIdentity = { actorId: string; generation: number; token?: string };
 export type FollowedShop = { id: string; name: string; bio: string };
 export type FeedReason = { code: string; text: string };
-export type FeedPage = { reasons?: Record<string, FeedReason>; items: Product[]; nextCursor: string | null; sessionId: string; algorithmVersion: string; generation: number };
+export type FeedPage = { pageSize?: number; reasons?: Record<string, FeedReason>; items: Product[]; nextCursor: string | null; sessionId: string; algorithmVersion: string; generation: number };
 export type FeedEvent = { id: string; productId: string; kind: 'view' | 'progress' | 'finish' | 'detail' | 'save' | 'cart' | 'search_select'; sessionId?: string; impressionId?: string; endReason?: 'swipe' | 'pause'; durationMs?: number; completion?: number; loops?: number };

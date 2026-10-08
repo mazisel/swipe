@@ -87,7 +87,7 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-61 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
+65 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
 
 6 Ekim 2026 kontrolünde Expo Doctor 21/21 geçti. `npm audit`, Expo/Metro ve yönlendiricinin geçişli bağımlılıklarında 28 uyarı (18 yüksek, 10 orta) bildirdi. Registry'de `braces` ve `node-forge` için uyumlu yeni yama henüz bulunmadı; `npm audit fix --force` uyumsuz framework sürümleri önerdiği için uygulanmadı. Üretim öncesi tekrar değerlendirilmeli; geliştirme sunucusu internete açılmamalı.
 
@@ -107,4 +107,4 @@ Simülatörde Expo Go'ya `exp://127.0.0.1:8082` adresini açın. Yerel API `npm 
 
 Manuel kargo durumu, firma ve takip numarasi yonetimi: [Kargo rehberi](docs/SHIPPING.md).
 
-Keşfet sırası 20 ürünlük sayfalarla oluşturulur. Yeni sayfa isteği, sunucuya ulaşmış güncel davranışları kullanır; önceden hazırlanmış sayfanın sırası sabittir. Katalog tek sayfaya sığıyorsa yeni sıralama yeniden keşfetmede görünür. Video hazırlama penceresi kartlar arasındaki görünürlük boşluğunda korunur; görünmeyen oyuncular duraklatılır. Yakındaki videoların hazır tutulması ileri/geri geçişte yeniden yüklemeyi azaltır. Native medya yüklemesi `replaceAsync` kullanır.
+Keşfet uygulamada 6 ürünlük sayfalarla oluşturulur; 20 ürün boyunca 14 kişisel / 4 keşif / 2 yükseliş dağılımı korunur. Yeni sayfa isteği, sunucuya ulaşmış güncel davranışları kullanır; önceden hazırlanmış sayfanın sırası sabittir. Son 30 dakikadaki sinyaller uzun vadeli ilgiyle birleştirilir; yakın zamanda görülen ürünler yeniden keşfette geriye alınır. Video hazırlama penceresi kartlar arasındaki görünürlük boşluğunda korunur; görünmeyen oyuncular duraklatılır. Yakındaki videoların hazır tutulması ileri/geri geçişte yeniden yüklemeyi azaltır. Native medya yüklemesi `replaceAsync` kullanır.

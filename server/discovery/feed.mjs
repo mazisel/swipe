@@ -124,6 +124,7 @@ export function installFeed({ app, db, productRows, fail, input, resolveUser, pe
     res.json({ following:data.following });
   });
   app.get('/api/feed', async (req, res) => {
+    const requestedSize = input(z.coerce.number().refine(n => [6,20].includes(n), 'Geçersiz sayfa boyutu.'), req.query.pageSize ?? 20);
     const started = performance.now(), a = await actor(req);
     const result = await db.transaction(async () => {
       const locked = await db.prepare('SELECT * FROM feed_actors WHERE id=? FOR UPDATE').get(a.id);
@@ -140,18 +141,21 @@ export function installFeed({ app, db, productRows, fail, input, resolveUser, pe
         const previous = await db.prepare('SELECT next_cursor FROM feed_pages WHERE session_id=? AND page=?').get(session.id,page-1);
         if (previous?.next_cursor !== req.query.cursor) throw fail(400,'Akış sayfası geçersiz.');
       } else {
-        session = { id: randomUUID(), algorithm: personalized ? ALGORITHM : 'swipe-balanced-v1' };
-        await db.prepare('INSERT INTO feed_sessions(id,actor_id,generation,algorithm) VALUES (?,?,?,?)').run(session.id,a.id,locked.generation,session.algorithm);
+        session = { id: randomUUID(), page_size: requestedSize, algorithm: personalized ? ALGORITHM : 'swipe-balanced-v1' };
+        await db.prepare('INSERT INTO feed_sessions(id,actor_id,generation,algorithm,page_size) VALUES (?,?,?,?,?)').run(session.id,a.id,locked.generation,session.algorithm,session.page_size);
       }
       const existing = await db.prepare('SELECT * FROM feed_pages WHERE session_id=? AND page=?').get(session.id,page);
-      const response = (ids, nextCursor, reasons = {}) => ({ reasons: Object.fromEntries(ids.filter(id => eligible(byId.get(id))).map(id => [id, reasons[id] || { code: "discovery", text: "Farklı parçalar keşfetmen için bu seçkiye eklendi." }])), items: ids.map(id => byId.get(id)).filter(eligible), nextCursor, sessionId: session.id, algorithmVersion: session.algorithm, generation: locked.generation });
+      const response = (ids, nextCursor, reasons = {}) => ({ pageSize: session.page_size, reasons: Object.fromEntries(ids.filter(id => eligible(byId.get(id))).map(id => [id, reasons[id] || { code: "discovery", text: "Farklı parçalar keşfetmen için bu seçkiye eklendi." }])), items: ids.map(id => byId.get(id)).filter(eligible), nextCursor, sessionId: session.id, algorithmVersion: session.algorithm, generation: locked.generation });
       if (existing) return response(existing.product_ids, existing.next_cursor, existing.reasons);
       const history = (await db.prepare('SELECT product_ids FROM feed_pages WHERE session_id=? ORDER BY page').all(session.id)).flatMap(r=>r.product_ids);
       const seen = new Set(history);
       const candidates = products.filter(p => eligible(p) && !seen.has(p.id));
       const features = new Map((await db.prepare("SELECT * FROM product_features WHERE status='ready'").all()).map(f=>[f.product_id,f]));
       const events = await db.prepare("SELECT * FROM feed_events WHERE actor_id=? AND generation=? AND created_at>now()-interval '90 days'").all(a.id,locked.generation);
-      const profile = buildProfile(events,products,features);
+      const now = Date.now();
+      const profile = buildProfile(events,products,features,now);
+      const recentProfile = buildProfile(events.filter(e => now-new Date(e.created_at).getTime() <= 30*60*1000),products,features,now);
+      const exposures = new Map((await db.prepare(`SELECT product_id,count(*) AS count,max(created_at) AS "lastSeen" FROM feed_impressions WHERE actor_id=? AND generation=? AND duration_ms>=1000 AND created_at>now()-interval '7 days' GROUP BY product_id`).all(a.id,locked.generation)).map(r => [r.product_id,r]));
       await db.prepare(`INSERT INTO feed_profiles(actor_id,generation,affinities,embedding) VALUES (?,?,?::jsonb,?::vector) ON CONFLICT(actor_id) DO UPDATE SET generation=excluded.generation,affinities=excluded.affinities,embedding=excluded.embedding,updated_at=now()`).run(a.id,locked.generation,JSON.stringify(profile.affinities),profile.embedding ? JSON.stringify(profile.embedding) : null);
       const stats = new Map((await db.prepare(`SELECT product_id, COUNT(DISTINCT actor_id) FILTER(WHERE kind='impression') AS impressions,
         COUNT(DISTINCT actor_id) FILTER(WHERE kind IN ('save','cart')) AS intent,
@@ -159,14 +163,14 @@ export function installFeed({ app, db, productRows, fail, input, resolveUser, pe
         FROM feed_events WHERE created_at>now()-interval '30 days' GROUP BY product_id`).all()).map(r=>[r.product_id,r]));
       const followed = new Set((await db.prepare('SELECT seller_id FROM shop_follows WHERE actor_id=?').all(a.id)).map(r=>r.seller_id));
       const reasons = {};
-      const selected = selectPage(rankProducts({ products:candidates,features,stats,profile,seed:session.id,personalized,followed }),history.map(id=>byId.get(id)).filter(Boolean),20,(candidate,mode) => { reasons[candidate.product.id] = explainCandidate(candidate,mode); });
+      const selected = selectPage(rankProducts({ products:candidates,features,stats,profile,recentProfile,exposures,seed:session.id,personalized,followed,now }),history.map(id=>byId.get(id)).filter(Boolean),session.page_size,(candidate,mode) => { reasons[candidate.product.id] = explainCandidate(candidate,mode); });
       const next = candidates.length > selected.length ? cursor(session.id,page+1) : null;
       await db.prepare('INSERT INTO feed_pages(session_id,page,product_ids,next_cursor,reasons) VALUES (?,?,?::jsonb,?,?::jsonb)').run(session.id,page,JSON.stringify(selected.map(p=>p.id)),next,JSON.stringify(reasons));
       return response(selected.map(p=>p.id),next,reasons);
     });
     const ms = performance.now()-started;
     await db.prepare(`INSERT INTO feed_metrics(day,algorithm,requests,total_ms,max_ms) VALUES (?,?,1,?,?) ON CONFLICT(day,algorithm) DO UPDATE SET requests=feed_metrics.requests+1,total_ms=feed_metrics.total_ms+excluded.total_ms,max_ms=GREATEST(feed_metrics.max_ms,excluded.max_ms)`).run(new Date().toISOString().slice(0,10),result.algorithmVersion,ms,ms);
-    res.json(result);
+    res.set('Cache-Control','no-store').json(result);
   });
   app.post('/api/feed/events', async (req, res) => {
     const a = await actor(req), data = input(z.object({ generation:z.number().int().positive(), events:z.array(eventSchema).max(40) }).strict(),req.body);

@@ -207,3 +207,24 @@ test('guest and account likes merge without double counting; consumed tokens and
  assert.equal((await call('/likes',undefined,a)).status,401);
  const fresh=await call('/feed/identity',{},a);assert.deepEqual((await call('/likes',undefined,fresh)).ids,[]);
 });
+
+test('adaptive pages keep six-item cursors stable and incorporate new signals within the same session',async()=>{
+ const a=await call('/feed/identity',{},null);
+ assert.equal((await call('/feed?pageSize=7',undefined,a)).status,400);
+ const first=await call('/feed?pageSize=6',undefined,a);
+ assert.equal(first.items.length,6);assert.equal(first.pageSize,6);
+ const productId=first.items[0].id;
+ await call('/feed/events',{generation:1,events:[{id:randomUUID(),productId,kind:'cart',sessionId:first.sessionId}]},a);
+ // Changing the query cannot enlarge an existing session or invalidate retries.
+ const second=await call(`/feed?cursor=${first.nextCursor}&pageSize=20`,undefined,a);
+ assert.equal(second.items.length,6);assert.equal(second.pageSize,6);assert.equal(second.sessionId,first.sessionId);
+ const profile=await db.prepare('SELECT affinities FROM feed_profiles WHERE actor_id=?').get(a.actorId);
+ assert.ok(profile.affinities[`category:${first.items[0].category}`]>0);
+ await call('/feed/events',{generation:1,events:[{id:randomUUID(),productId:second.items[0].id,kind:'cart',sessionId:first.sessionId}]},a);
+ const retry=await call(`/feed?cursor=${first.nextCursor}`,undefined,a);
+ assert.deepEqual(retry.items.map(p=>p.id),second.items.map(p=>p.id));assert.deepEqual(retry.reasons,second.reasons);
+ const third=await call(`/feed?cursor=${second.nextCursor}`,undefined,a);
+ assert.equal(new Set([...first.items,...second.items,...third.items].map(p=>p.id)).size,18);
+ const updated=await db.prepare('SELECT affinities FROM feed_profiles WHERE actor_id=?').get(a.actorId);
+ assert.ok(updated.affinities[`category:${second.items[0].category}`]>0);
+});

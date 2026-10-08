@@ -83,7 +83,7 @@ export default function Discover() {
   // Playback/measurement still stop in that gap via visibleIndex.
   // FlatList retains this callback identity even through Expo Fast Refresh.
   const [onViewable] = useState(() => ({ viewableItems }: { viewableItems: ViewToken<Product>[] }) => { const next = viewableItems[0]?.index ?? -1; setVisibleIndex(next); if (next >= 0) setIndex(next); });
-  useEffect(() => { if (!loading && nextCursor && products.length - index <= 5 && !error) void loadMore(); }, [index, products.length, loading, error, nextCursor, loadMore]);
+  useEffect(() => { if (!loading && nextCursor && products.length - index <= 2 && !error) void loadMore(); }, [index, products.length, loading, error, nextCursor, loadMore]);
   async function share(product: Product) {
     try { await Share.share({ message: `${product.title} — ${money(product.price)} · ${product.shop}`, ...(Platform.OS === 'web' ? { url: `${window.location.origin}/product/${product.id}` } : {}) }); }
     catch { setToast('Paylaşım açılamadı.'); }
@@ -101,7 +101,7 @@ export default function Discover() {
           onScroll={lesson.onScroll} scrollEventThrottle={100}
           getItemLayout={(_, i) => ({ length: height, offset: height * i, index: i })} onViewableItemsChanged={onViewable} viewabilityConfig={viewabilityConfig}
           extraData={{ index, visibleIndex, saved, cart, pathname, height, options, sizeProduct, dragging, lesson: lesson.visible, foreground }}
-          onEndReached={() => { if (!error) void feed.loadMore(); }} onEndReachedThreshold={2}
+          onEndReached={() => { if (!error) void feed.loadMore(); }} onEndReachedThreshold={0.5}
           ListFooterComponent={<View style={[styles.center, { height, padding: 32, paddingBottom: 130 }]}>{feed.loadingMore ? <ActivityIndicator color="#FFF" /> : error ? <Empty title="Keşifler yüklenemedi" description={error} action={{ title: 'Yeniden dene', onPress: () => { if (feed.nextCursor) void feed.loadMore(); else restart(); } }} /> : <Empty icon="reels" title="Şimdilik hepsini gördün." description="Yeni bir sırayla yeniden keşfet. Beğendiklerin bize yol gösteriyor." action={{ title: 'Yeniden keşfet', onPress: restart }} />}</View>}
           renderItem={({ item, index: itemIndex }) => <DiscoveryCard
             product={item} next={products[itemIndex + 1]} height={height} width={reelWidth} bottom={Math.max(insets.bottom, 14)}

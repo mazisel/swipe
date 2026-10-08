@@ -21,7 +21,7 @@ Express artık yalnızca PostgreSQL SQL'i çalıştırır. `DATABASE_URL` varsa 
 
 Sıralama: %35 vektör benzerliği + %25 kategori/stil/renk/fiyat ilgisi + %25 gösterime göre düzeltilmiş kaydetme/çanta oranı + %10 yenilik + %5 yakın zamanlı yükseliş. AI vektörü yoksa anlamsal bileşen ürün etiketlerine geri döner. Yapay bir embedding üretilmez. Soğuk başlangıçta nötr ilgi ve mağaza/kategori çeşitliliği kullanılır. İlk sürüm ağırlıkları hipotezdir; dönüşüm artışı iddiası yoktur.
 
-Sayfalar oturuma bağlı kalıcı ürün ID listeleridir. İmleç aynı kullanıcı için aynı sayfayı döndürür; stok ve gizleme yeniden kontrol edilir. Ürün özeti güncellemeleri mevcut sıralamayı değiştirmez. Son beş ürüne gelmeden sonraki sayfa önceden yüklenir. `FEED_PERSONALIZED=false` yeni oturumları dengeli genel akışa çevirir; eski sürüm imleci yenileme ister.
+Sayfalar oturuma bağlı kalıcı ürün ID listeleridir. İmleç aynı kullanıcı için aynı sayfayı döndürür; stok ve gizleme yeniden kontrol edilir. Ürün özeti güncellemeleri mevcut sıralamayı değiştirmez. Uygulama 6 ürünlük sayfa ister; kalan iki ürün civarında sonraki sayfa önceden yüklenir. Yeni sayfa isteğinden önce bekleyen davranışlar gönderilmeye çalışılır. `FEED_PERSONALIZED=false` yeni oturumları dengeli genel akışa çevirir; eski sürüm imleci yenileme ister.
 
 API: `POST /api/feed/identity`, `GET /api/feed?cursor=...`, `POST /api/feed/events`, `POST /api/feed/preferences`, `POST /api/feed/reset`. Misafir istekleri `X-Feed-Token`, hesap istekleri mevcut Bearer token taşır. İstemcinin userId/generation sahteciliği otorite değildir. Yeni types `FeedIdentity`, `FeedEvent`, `FeedPage` paylaşılır.
 
@@ -81,3 +81,13 @@ Uygulama maliyet hesabı 2.134 mikro USD (0,002134 USD) yazdı; ayrılan 0,60 US
 Gerçek vektör kontrollü karma ilgi profiliyle sıralayıcıya verildi: aynı ürünün puanı vektörle 0,654993, vektörsüz 0,549993 oldu (+0,105). Böylece anlamsal bileşenin çalıştığı doğrulandı; bu ölçüm gerçek kullanıcı dönüşüm artışı veya geniş katalog öneri kalitesi iddiası değildir. Aynı ürün yeniden kuyruğa alındığında iş adedi 1 kaldı; ek ücretli çağrı oluşmadı.
 
 Ayrıntılı yerel rapor: `server/data/ai-smoke-report.json`. Canlı test yalnızca tek PNG görseli kapsar; gerçek ürün fotoğrafları üzerinde kalite değerlendirmesi ve video analizinin canlı testi ayrıca yapılmalıdır. Lint ve typecheck geçti.
+
+## 9 Ekim 2026 — uyarlanabilir sıralama v3
+
+`swipe-hybrid-v3` kısa ve uzun vadeli ilgiyi birlikte kullanır. Yedi günlük yarı ömürlü geçmiş korunur; son 30 dakikada kaydedilmiş sinyallerden ikinci bir profil hesaplanır. Yakın profilin karışımdaki payı toplam sinyal gücüyle artar, %60 ile sınırlıdır. Tek bir hızlı geçiş eski ilgiyi silmez. Günlük olay tekilleştirmesi devam eder. Bu, davranış ağırlıklarına dayalı sıralamadır; eğitilmiş bir derin öğrenme modeli değildir.
+
+Uygulama altılı sayfalara geçti. Eski istemciler için varsayılan 20 korunur; boyut oturuma kaydedilir ve imleçle değiştirilemez. Keşif/yükseliş yuvaları sayfa başında sıfırlanmaz; her 20 konumda 14/4/2 dengesi korunur. Hazır sayfalar yeniden sıralanmaz. Yeni sayfa güncel sunucu sinyallerini kullanır; ağ kesintisi/bekleyen olaylar kişiselleştirmeyi geciktirebilir.
+
+Son yedi gündeki en az bir saniyelik gerçek gösterimler yeniden keşfette ürün yorgunluğu puanını belirler. Ceza üç gösterimde üst sınıra ulaşır ve bir günlük yarı ömürle azalır; ürün kalıcı olarak gizlenmez. Gizleme/stock filtreleri ve oturum içi tekrarsızlık ayrıca korunur. Genel akış bayrağı yakın profili ve kişisel gösterim cezasını kullanmaz.
+
+`010_adaptive_feed.sql` oturum sayfa boyutu ve gösterim indeksi ekler. İzole senaryolar, büyük eski ilgi geçmişine rağmen yeni alışveriş niyetine yönelmeyi, tek kaydırmada aşırı değişmemeyi, 14/4/2 dağılımını, mağaza çeşitliliğini, tekrar cezasının zamanla azalmasını ve imleç tekrarlarının sabitliğini doğrular. Bu testler gerçek kullanıcı dönüşüm artışı kanıtı değildir. Üretimde sürüm bazında beğeni/çanta, hızlı geçiş ve gecikme izlenerek ağırlıklar kalibre edilmelidir.

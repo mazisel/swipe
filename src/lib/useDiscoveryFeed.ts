@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FeedPage, Product } from '../../shared/types';
 import { api, ApiError } from './api';
-import { initializeDiscovery } from './discovery';
+import { initializeDiscovery, flushDiscovery } from './discovery';
+async function syncPendingSignals() {
+  // Slow/offline telemetry must not hold the next media page for the API timeout.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try { await Promise.race([flushDiscovery(), new Promise<void>(resolve => { timer = setTimeout(resolve, 750); })]); }
+  finally { if (timer) clearTimeout(timer); }
+}
 export function useDiscoveryFeed(hydrated: boolean, revision: number) {
   const [page, setPage] = useState<FeedPage | null>(null);
   const [loading, setLoading] = useState(true), [loadingMore, setLoadingMore] = useState(false), [error, setError] = useState('');
@@ -12,7 +18,7 @@ export function useDiscoveryFeed(hydrated: boolean, revision: number) {
     const current = ++epoch.current; hidden.current.clear(); inflight.current = false;
     void (async () => {
       setLoading(true); setLoadingMore(false); setError('');
-      try { await initializeDiscovery(); const result = await api<FeedPage>('/feed'); if (current === epoch.current) setPage(result); }
+      try { await initializeDiscovery(); await syncPendingSignals(); if (current !== epoch.current) return; const result = await api<FeedPage>('/feed?pageSize=6'); if (current === epoch.current) setPage(result); }
       catch (e) { if (current === epoch.current) setError((e as Error).message); }
       finally { if (current === epoch.current) setLoading(false); }
     })();
@@ -23,6 +29,8 @@ export function useDiscoveryFeed(hydrated: boolean, revision: number) {
     if (!nextCursor || inflight.current) return;
     inflight.current = true; setLoadingMore(true); const current = epoch.current;
     try {
+      await syncPendingSignals();
+      if (current !== epoch.current) return;
       const next = await api<FeedPage>(`/feed?cursor=${encodeURIComponent(nextCursor)}`);
       if (current !== epoch.current) return;
       setPage(previous => previous ? { ...next, reasons: { ...previous.reasons, ...next.reasons }, items: [...previous.items, ...next.items.filter(p => !hidden.current.has(p.id) && !hidden.current.has(p.sellerId) && !previous.items.some(x => x.id === p.id))] } : next); setError('');
