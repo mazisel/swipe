@@ -30,7 +30,7 @@ export default function Discover() {
   const pendingSize = useRef<((completed: boolean) => void) | null>(null);
   const [feedback, setFeedback] = useState<SwipeReceipt | null>(null);
   const [dragging, setDragging] = useState(false), [hiding, setHiding] = useState(false);
-  const [height, setHeight] = useState(0), [index, setIndex] = useState(0);
+  const [height, setHeight] = useState(0), [index, setIndex] = useState(0), [visibleIndex, setVisibleIndex] = useState(0);
   const { width, height: windowHeight } = useWindowDimensions();
   const list = useRef<FlatList<Product>>(null);
   const pathname = usePathname(), foreground = useForeground(), insets = useSafeAreaInsets();
@@ -79,8 +79,10 @@ export default function Discover() {
       setToast(kind === 'product' ? 'Bu parça akışından kaldırıldı.' : 'Bu mağazanın parçaları gizlendi.');
     } catch (e) { setToast((e as Error).message); } finally { setHiding(false); }
   }
+  // Keep the prepared media window anchored while neither card is 65% visible.
+  // Playback/measurement still stop in that gap via visibleIndex.
   // FlatList retains this callback identity even through Expo Fast Refresh.
-  const [onViewable] = useState(() => ({ viewableItems }: { viewableItems: ViewToken<Product>[] }) => { setIndex(viewableItems[0]?.index ?? -1); });
+  const [onViewable] = useState(() => ({ viewableItems }: { viewableItems: ViewToken<Product>[] }) => { const next = viewableItems[0]?.index ?? -1; setVisibleIndex(next); if (next >= 0) setIndex(next); });
   useEffect(() => { if (!loading && nextCursor && products.length - index <= 5 && !error) void loadMore(); }, [index, products.length, loading, error, nextCursor, loadMore]);
   async function share(product: Product) {
     try { await Share.share({ message: `${product.title} — ${money(product.price)} · ${product.shop}`, ...(Platform.OS === 'web' ? { url: `${window.location.origin}/product/${product.id}` } : {}) }); }
@@ -98,13 +100,13 @@ export default function Discover() {
           initialNumToRender={2} maxToRenderPerBatch={2} windowSize={3} scrollEnabled={!dragging && !options && !sizeProduct}
           onScroll={lesson.onScroll} scrollEventThrottle={100}
           getItemLayout={(_, i) => ({ length: height, offset: height * i, index: i })} onViewableItemsChanged={onViewable} viewabilityConfig={viewabilityConfig}
-          extraData={{ index, saved, cart, pathname, height, options, sizeProduct, dragging, lesson: lesson.visible, foreground }}
+          extraData={{ index, visibleIndex, saved, cart, pathname, height, options, sizeProduct, dragging, lesson: lesson.visible, foreground }}
           onEndReached={() => { if (!error) void feed.loadMore(); }} onEndReachedThreshold={2}
           ListFooterComponent={<View style={[styles.center, { height, padding: 32, paddingBottom: 130 }]}>{feed.loadingMore ? <ActivityIndicator color="#FFF" /> : error ? <Empty title="Keşifler yüklenemedi" description={error} action={{ title: 'Yeniden dene', onPress: () => { if (feed.nextCursor) void feed.loadMore(); else restart(); } }} /> : <Empty icon="reels" title="Şimdilik hepsini gördün." description="Yeni bir sırayla yeniden keşfet. Beğendiklerin bize yol gösteriyor." action={{ title: 'Yeniden keşfet', onPress: restart }} />}</View>}
           renderItem={({ item, index: itemIndex }) => <DiscoveryCard
             product={item} next={products[itemIndex + 1]} height={height} width={reelWidth} bottom={Math.max(insets.bottom, 14)}
-            active={itemIndex === index} preload={itemIndex === index + 1 && pathname === '/' && foreground} playing={itemIndex === index && pathname === '/' && !options && !sizeProduct && !dragging && !lesson.visible}
-            enabled={itemIndex === index && pathname === '/' && foreground && !options && !sizeProduct}
+            active={itemIndex === visibleIndex} preload={Math.abs(itemIndex - index) <= 1 && pathname === '/' && foreground} playing={itemIndex === visibleIndex && pathname === '/' && !options && !sizeProduct && !dragging && !lesson.visible}
+            enabled={itemIndex === visibleIndex && pathname === '/' && foreground && !options && !sizeProduct}
             saved={saved.includes(item.id)} sessionId={feed.sessionId}
             onAction={kind => swipe(item, kind)} onExit={() => advance(item.id)} onDragging={setDragging}
             onSave={() => !dragging ? toggleSaved(item.id) : Promise.resolve(false)} onOptions={() => { setShowReason(false); setOptions(item); }} onShare={() => { void share(item); }}

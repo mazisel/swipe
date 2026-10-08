@@ -106,3 +106,5 @@ NODE_OPTIONS=--dns-result-order=ipv4first npx expo start --port 8082 --localhost
 Simülatörde Expo Go'ya `exp://127.0.0.1:8082` adresini açın. Yerel API `npm run api:demo` ile 3001 portunda çalışmalıdır. Xcode Device Hub penceresini algılamada Expo CLI zaman aşımına uğrarsa sunucu ve simülatör ayrı başlatılabilir.
 
 Manuel kargo durumu, firma ve takip numarasi yonetimi: [Kargo rehberi](docs/SHIPPING.md).
+
+Keşfet sırası 20 ürünlük sayfalarla oluşturulur. Yeni sayfa isteği, sunucuya ulaşmış güncel davranışları kullanır; önceden hazırlanmış sayfanın sırası sabittir. Katalog tek sayfaya sığıyorsa yeni sıralama yeniden keşfetmede görünür. Video hazırlama penceresi kartlar arasındaki görünürlük boşluğunda korunur; görünmeyen oyuncular duraklatılır. Yakındaki videoların hazır tutulması ileri/geri geçişte yeniden yüklemeyi azaltır. Native medya yüklemesi `replaceAsync` kullanır.

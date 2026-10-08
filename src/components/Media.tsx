@@ -18,21 +18,32 @@ function Video({ product, active, reel, visible = active, sessionId, onLongPress
   const [firstFrame, setFirstFrame] = useState(false);
   const canPress = useContext(SwipePressContext);
   const [muted, setMuted] = useState(true); const [paused, setPaused] = useState(false); const foreground = useForeground(); const insets = useSafeAreaInsets();
-  const player = useVideoPlayer(mediaUrl(product.media), p => { p.loop = true; p.muted = true; });
+  const source = mediaUrl(product.media);
+  const [loadedSource, setLoadedSource] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
+  // Construct an empty player; load native asset metadata off the render path.
+  const player = useVideoPlayer(null, p => { p.loop = true; p.muted = true; });
+  useEffect(() => {
+    let alive = true;
+    void player.replaceAsync({ uri: source, useCaching: true }).then(() => {
+      if (alive) setLoadedSource(source);
+    }).catch(() => { if (alive) setLoadFailed(true); });
+    return () => { alive = false; };
+  }, [player, source]);
   const { status } = useEvent(player, 'statusChange', { status: player.status });
   useViewing({ productId: product.id, sessionId, visible: !!visible, enabled: !!active && foreground && !paused && status === 'readyToPlay', sample: () => ({ position: player.currentTime, duration: player.duration, playing: player.playing }) });
   // Expo VideoPlayer is an imperative native handle with mutable properties.
   // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { player.muted = muted; }, [muted, player]);
-  useEffect(() => { if (active && foreground && !paused) player.play(); else player.pause(); }, [active, foreground, paused, player]);
+  useEffect(() => { if (active && foreground && !paused && loadedSource === source) player.play(); else player.pause(); }, [active, foreground, paused, player, loadedSource, source]);
   return <View style={StyleSheet.absoluteFill}><VideoView player={player} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]} contentFit="cover" nativeControls={false} surfaceType="textureView" playsInline onFirstFrameRender={() => setFirstFrame(true)} />
     {!firstFrame && !!(product.poster || fallback) && <Image source={{ uri: mediaUrl(product.poster || fallback!) }} resizeMode="cover" style={StyleSheet.absoluteFill} />}
-    {status === 'error' && <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#25272B' }]}><Text style={{ color: '#FFF' }}>Video yüklenemedi.</Text><Text style={{ marginTop: 8, color: '#AAA' }}>Bağlantını kontrol et.</Text></View>}
+    {(loadFailed || status === 'error') && <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#25272B' }]}><Text style={{ color: '#FFF' }}>Video yüklenemedi.</Text><Text style={{ marginTop: 8, color: '#AAA' }}>Bağlantını kontrol et.</Text></View>}
     {reel && <><Pressable accessibilityRole="button" accessibilityLabel={paused ? 'Videoyu oynat' : 'Videoyu duraklat'} onLongPress={() => { if (canPress()) onLongPress?.(); }} onPress={() => { if (canPress()) setPaused(!paused); }} style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>{paused && <View style={{ padding: 23, borderRadius: 50, backgroundColor: 'rgba(0,0,0,.22)' }}><Icon name="play" size={36} color="#FFF" filled /></View>}</Pressable><View style={{ position: 'absolute', top: insets.top + 14, right: 14 }}><IconButton name={muted ? 'mute' : 'sound'} label={muted ? 'Sesi aç' : 'Sesi kapat'} onPress={() => setMuted(!muted)} color="#FFF" background="rgba(0,0,0,0.23)" /></View></>}
   </View>;
 }
 function SingleMedia({ product, active = false, reel = false, visible = active, sessionId, onLongPress, fallback }: MediaProps) {
-  if (product.mediaType === 'video') return <Video product={product} active={active} reel={reel} visible={visible} sessionId={sessionId} onLongPress={onLongPress} fallback={fallback} />;
+  if (product.mediaType === 'video') return <Video key={product.media} product={product} active={active} reel={reel} visible={visible} sessionId={sessionId} onLongPress={onLongPress} fallback={fallback} />;
   return <Photo product={product} active={active} visible={visible} sessionId={sessionId} onLongPress={onLongPress} fallback={fallback} />;
 }
 function Photo({ product, active, visible, sessionId, onLongPress, fallback }: MediaProps) {
