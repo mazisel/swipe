@@ -11,14 +11,14 @@ import { Icon } from '../components/Icon';
 import { Thumbnail } from '../components/Thumbnail';
 
 type Thread = { conversation: Conversation; messages: Message[] };
-export function MessageCenter({ seller = false, productId }: { seller?: boolean; productId?: string }) {
+export function MessageCenter({ seller = false, productId, conversationId }: { seller?: boolean; productId?: string; conversationId?:string }) {
   const { user, hydrated } = useStore();
   if (!hydrated) return <View style={s.loading}><ActivityIndicator color="#FFF" /></View>;
   if (!user) return <Empty icon="send" title="Sohbet burada başlar." description="Bir parçayı merak ettiğinde mağazaya doğrudan sor. Yanıtların burada seni beklesin." action={{ title: 'Mesajlaşmak için giriş yap', onPress: () => router.replace({ pathname: '/profile', params: { next: productId ? `/messages?productId=${encodeURIComponent(productId)}` : '/messages' } }) }} />;
-  return <Inbox key={`${user.id}-${seller}-${productId || ''}`} seller={seller} productId={productId} userId={user.id} />;
+  return <Inbox key={`${user.id}-${seller}-${productId || ''}-${conversationId||''}`} seller={seller} productId={productId} conversationId={conversationId} userId={user.id} />;
 }
-function Inbox({ seller, productId, userId }: { seller: boolean; productId?: string; userId: string }) {
-  const [selected, setSelected] = useState<string | null>(null); const [starting, setStarting] = useState(!!productId); const [startError, setStartError] = useState('');
+function Inbox({ seller, productId, conversationId, userId }: { seller: boolean; productId?: string; conversationId?:string; userId: string }) {
+  const [selected, setSelected] = useState<string | null>(conversationId||null); const [starting, setStarting] = useState(!!productId); const [startError, setStartError] = useState('');
   useFocusEffect(useCallback(() => {
     let alive = true;
     if (productId && !seller) void api<{ conversation: Conversation }>('/conversations/start', { productId }).then(data => { if (alive) { setSelected(data.conversation.id); setStartError(''); } }).catch(e => { if (alive) setStartError(e.message); }).finally(() => { if (alive) setStarting(false); });
@@ -52,7 +52,7 @@ function Chat({ id, userId, seller, onBack }: { id: string; userId: string; sell
   }, [id]);
   useLiveRefresh(load);
   async function send() {
-    const body = draft.trim(); if (!body || sending.current) return;
+    const body = draft.trim(); if (thread?.conversation.blocked || !body || sending.current) return;
     sending.current = true; setBusy(true); setSendError('');
     if (!attempt.current || attempt.current.body !== body) attempt.current = { body, key: Crypto.randomUUID() };
     try {
@@ -69,9 +69,9 @@ function Chat({ id, userId, seller, onBack }: { id: string; userId: string; sell
     <ErrorText message={error} />
     {!thread && !error ? <View style={s.loading}><ActivityIndicator color="#FFF" /></View> : <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (atBottom.current) scroll.current?.scrollToEnd({ animated: true }); }} onScroll={e => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80; }} scrollEventThrottle={100} contentContainerStyle={{ flexGrow: 1, padding: 20, gap: 13 }}>
       {thread && !thread.messages.length && <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 13 }}><Icon name="send" size={32} color="#C8D4BB" /><Text style={s.name}>İlk mesaj senden.</Text><Text style={[s.subtitle, { textAlign: 'center', maxWidth: 240 }]}>Beden, doku ya da aklına takılan küçük bir detay. Mağazaya sor.</Text></View>}
-      {thread?.messages.map((m, index) => { const own = m.senderId === userId; return <View key={m.id} style={{ alignSelf: own ? 'flex-end' : 'flex-start', maxWidth: '85%', gap: 5 }}><View style={[s.bubble, own && s.ownBubble]}><Text selectable style={{ color: own ? '#192019' : '#E9ECF0', fontSize: 14, lineHeight: 21 }}>{m.body}</Text></View><Text style={[s.date, { alignSelf: own ? 'flex-end' : 'flex-start', paddingHorizontal: 4 }]}>{new Date(m.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}{own && index === thread.messages.length - 1 ? (m.id <= thread.conversation.peerRead ? ' · Görüldü' : ' · Gönderildi') : ''}</Text></View>; })}
+      {thread?.messages.map((m, index) => { const own = m.senderId === userId; return <View key={m.id} style={{ alignSelf: own ? 'flex-end' : 'flex-start', maxWidth: '85%', gap: 5 }}><View style={[s.bubble, own && s.ownBubble]}><Text selectable style={{ color: own ? '#192019' : '#E9ECF0', fontSize: 14, lineHeight: 21 }}>{m.body}</Text></View><Text style={[s.date, { alignSelf: own ? 'flex-end' : 'flex-start', paddingHorizontal: 4 }]}>{new Date(m.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}{own && index === thread.messages.length - 1 ? (m.id <= thread.conversation.peerRead ? ' · Görüldü' : ' · Gönderildi') : ''}</Text>{!own&&<Pressable accessibilityRole="button" onPress={()=>router.push({pathname:'/report',params:{kind:'message',targetId:String(m.id)}})}><Text style={s.date}>Mesajı bildir</Text></Pressable>}</View>; })}
     </ScrollView>}
-    <View style={s.composer}><ErrorText message={sendError} /><View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10 }}><TextInput accessibilityLabel="Mesajın" value={draft} onChangeText={setDraft} editable={!busy} placeholder="Bir mesaj yaz…" placeholderTextColor="#9298A0" multiline maxLength={2000} style={s.input} /><Pressable accessibilityRole="button" accessibilityLabel="Mesajı gönder" accessibilityState={{ disabled: busy || !draft.trim() || !thread }} disabled={busy || !draft.trim() || !thread} onPress={send} style={[s.send, { opacity: busy || !draft.trim() || !thread ? .4 : 1 }]}>{busy ? <ActivityIndicator color="#192019" /> : <Icon name="send" size={21} color="#192019" />}</Pressable></View>{!!sendError && <Button title="Tekrar gönder" outline onPress={send} loading={busy} />}</View>
+    {thread?.conversation.peerId&&<View style={{paddingHorizontal:18,gap:8}}><Button title={thread.conversation.blockedByMe?'Engeli kaldır':'Mesajlarda engelle'} outline onPress={async()=>{try{await api('/blocks',{userId:thread.conversation.peerId,block:!thread.conversation.blockedByMe});await load(()=>true);}catch(e){setSendError((e as Error).message);}}}/>{thread.conversation.blocked&&<Text style={s.subtitle}>Bu hesapla yeni mesaj gönderimi kapalı.</Text>}</View>}<View style={s.composer}><ErrorText message={sendError} /><View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10 }}><TextInput accessibilityLabel="Mesajın" value={draft} onChangeText={setDraft} editable={!busy&&!thread?.conversation.blocked} placeholder="Bir mesaj yaz…" placeholderTextColor="#9298A0" multiline maxLength={2000} style={s.input} /><Pressable accessibilityRole="button" accessibilityLabel="Mesajı gönder" accessibilityState={{ disabled: busy || !!thread?.conversation.blocked || !draft.trim() || !thread }} disabled={busy || !!thread?.conversation.blocked || !draft.trim() || !thread} onPress={send} style={[s.send, { opacity: busy || !!thread?.conversation.blocked || !draft.trim() || !thread ? .4 : 1 }]}>{busy ? <ActivityIndicator color="#192019" /> : <Icon name="send" size={21} color="#192019" />}</Pressable></View>{!!sendError && <Button title="Tekrar gönder" outline onPress={send} loading={busy} />}</View>
   </KeyboardAvoidingView>;
 }
 const s = StyleSheet.create({

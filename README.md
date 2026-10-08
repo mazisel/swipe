@@ -87,13 +87,13 @@ npx expo-doctor
 npx expo export --platform all
 ```
 
-58 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
+60 test; PostgreSQL/PGlite + pgvector üzerinde hesap, yetkilendirme, dosya içeriği, mağaza sahipliği, fiyat/beden/stok, sipariş, sosyal özellikler, öneri sistemi, AI bütçesi ve aktarım kontrollerini; ayrıca kaydırma eşiği, mükerrer işlemler, geri alma ve öğretici sayacını kapsar. Kaydırma akışı web ve iPhone 18 Pro / iOS 27 simülatöründe denendi. Android paketi üretildi; Android cihaz ve fiziksel dokunsal geri bildirim henüz denenmedi.
 
 6 Ekim 2026 kontrolünde Expo Doctor 21/21 geçti. `npm audit`, Expo/Metro ve yönlendiricinin geçişli bağımlılıklarında 28 uyarı (18 yüksek, 10 orta) bildirdi. Registry'de `braces` ve `node-forge` için uyumlu yeni yama henüz bulunmadı; `npm audit fix --force` uyumsuz framework sürümleri önerdiği için uygulanmadı. Üretim öncesi tekrar değerlendirilmeli; geliştirme sunucusu internete açılmamalı.
 
 Ürün kararları, araştırma kaynakları ve bilinen kapsam: [docs/PRODUCT.md](docs/PRODUCT.md).
 
-DM listesi ve açık sohbet, ekran odaktayken ve uygulama ön plandayken 7 saniyede bir yenilenir. Bu sürümde metin mesajları vardır; push bildirimleri, kullanıcılar arası DM, medya mesajları, engelleme/şikâyet ve moderasyon paneli eklenmemiştir. Sosyal listelerde üretim ölçeği için sayfalama gerekir.
+DM listesi ve açık sohbet, ekran odaktayken ve uygulama ön plandayken 7 saniyede bir yenilenir. Bu sürümde metin mesajları vardır; telefon push bildirimleri, kullanıcılar arası DM ve medya mesajları eklenmemiştir. Ürün/mağaza/mesaj şikâyetleri, yönetici inceleme kuyruğu, iki yönlü DM engelleme ve uygulama içi bildirimler vardır. [Güvenlik ve bildirimler](docs/SAFETY_NOTIFICATIONS.md). Sosyal listelerde üretim ölçeği için sayfalama gerekir.
 
 ### Bu Mac üzerinde simülatör bağlantısı
 

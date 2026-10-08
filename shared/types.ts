@@ -1,4 +1,4 @@
-import type { Shipping } from './shipping';
+import type { Shipping, Shipment } from './shipping';
 export type Category = 'Tümü' | 'Giyim' | 'Çanta' | 'Ayakkabı' | 'Aksesuar' | 'Yaşam';
 export type ProductMedia = { url: string; type: 'image' | 'video'; poster?: string };
 export type Product = {
@@ -10,11 +10,11 @@ export type Product = {
 };
 export type User = { id: string; name: string; email: string; shop: string | null; shopBio?: string };
 export type CartItem = { productId: string; size: string; quantity: number };
-export type Order = { shipping?: Shipping; id: string; total: number; status: 'demo'; createdAt: string; items: { productId: string; title: string; shop: string; size: string; quantity: number; price: number }[] };
+export type Order = { shipping?: Shipping; shipments?: Shipment[]; id: string; total: number; status: 'demo'; createdAt: string; items: { productId: string; title: string; shop: string; size: string; quantity: number; price: number }[] };
 export type Comment = { id: string; userId: string; name: string; body: string; createdAt: string };
 export type Review = Comment & { rating: number; purchaseType: 'demo' };
 export type Message = { id: number; senderId: string; body: string; createdAt: string };
-export type Conversation = { id: string; productId: string; productTitle: string; peerName: string; peerRead: number; unread: number; lastMessage: Message | null };
+export type Conversation = { peerId?:string;blocked?:boolean;blockedByMe?:boolean; id: string; productId: string; productTitle: string; peerName: string; peerRead: number; unread: number; lastMessage: Message | null };
 export const categories: Category[] = ['Tümü', 'Giyim', 'Çanta', 'Ayakkabı', 'Aksesuar', 'Yaşam'];
 export const money = (cents: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
 export type FeedIdentity = { actorId: string; generation: number; token?: string };

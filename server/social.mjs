@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { blocked, lockPeers } from './safety.mjs';
+import { notify } from './notifications.mjs';
 
 export function installSocial({ app, db, auth, fail, input, text, weakSignal }) {
   const product = async id => {
@@ -64,11 +66,13 @@ export function installSocial({ app, db, auth, fail, input, text, weakSignal }) 
     const peer = (await db.prepare('SELECT name, shop FROM users WHERE id=?').get(isBuyer ? row.seller_id : row.buyer_id));
     const p = JSON.parse((await product(row.product_id)).data);
     const last = (await db.prepare('SELECT * FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 1').get(row.id));
-    return { id: row.id, productId: p.id, productTitle: p.title, peerName: isBuyer ? peer.shop : authorName(peer.name), peerRead: isBuyer ? row.seller_read : row.buyer_read, unread: (await db.prepare('SELECT COUNT(*) AS n FROM messages WHERE conversation_id=? AND sender_id!=? AND id>?').get(row.id, userId, isBuyer ? row.buyer_read : row.seller_read)).n, lastMessage: last ? message(last) : null };
+    const peerId=isBuyer?row.seller_id:row.buyer_id;
+    return { peerId,blocked:await blocked(db,userId,peerId),blockedByMe:!!await db.prepare('SELECT 1 FROM dm_blocks WHERE blocker_id=? AND blocked_id=?').get(userId,peerId), id: row.id, productId: p.id, productTitle: p.title, peerName: isBuyer ? peer.shop : authorName(peer.name), peerRead: isBuyer ? row.seller_read : row.buyer_read, unread: (await db.prepare('SELECT COUNT(*) AS n FROM messages WHERE conversation_id=? AND sender_id!=? AND id>?').get(row.id, userId, isBuyer ? row.buyer_read : row.seller_read)).n, lastMessage: last ? message(last) : null };
   };
   app.post('/api/conversations/start', auth, async (req, res) => {
     const { productId } = input(z.object({ productId: text(1, 100) }), req.body); const p = (await product(productId));
     if (p.seller_id === req.user.id) throw fail(400, 'Kendi mağazana mesaj gönderemezsin.');
+    if(await blocked(db,req.user.id,p.seller_id))throw fail(403,'Bu hesapla mesajlaşma kapalı.');
     (await db.prepare('INSERT INTO conversations (id,product_id,buyer_id,seller_id) VALUES (?,?,?,?) ON CONFLICT DO NOTHING').run(randomUUID(), productId, req.user.id, p.seller_id));
     const row = (await db.prepare('SELECT * FROM conversations WHERE product_id=? AND buyer_id=?').get(productId, req.user.id));
     res.json({ conversation: (await conversation(row, req.user.id)) });
@@ -86,8 +90,15 @@ export function installSocial({ app, db, auth, fail, input, text, weakSignal }) 
   app.post('/api/conversations/:id/messages', auth, async (req, res) => {
     const row = (await member(req.params.id, req.user.id));
     const data = input(z.object({ body: text(1, 2000), requestKey: z.uuid() }), req.body);
+    const result=await db.transaction(async()=>{
+    const peerId=row.buyer_id===req.user.id?row.seller_id:row.buyer_id;
+    await lockPeers(db,req.user.id,peerId);
+    if(await blocked(db,req.user.id,peerId))throw fail(403,'Bu hesapla mesajlaşma kapalı.');
     (await db.prepare('INSERT INTO messages (conversation_id,sender_id,body,request_key,created_at) VALUES (?,?,?,?,?) ON CONFLICT DO NOTHING').run(row.id, req.user.id, data.body, data.requestKey, new Date().toISOString()));
     const result = (await db.prepare('SELECT * FROM messages WHERE conversation_id=? AND sender_id=? AND request_key=?').get(row.id, req.user.id, data.requestKey));
+    await notify(db,{userId:peerId,eventKey:`message:${result.id}`,kind:'message',title:'Yeni bir mesajın var.',route:peerId===row.seller_id?`/studio?section=messages&conversationId=${row.id}`:`/messages?conversationId=${row.id}`});
+    return result;
+    });
     await weakSignal?.(req.user.id, row.product_id, 'dm');
     res.json({ message: message(result) });
   });

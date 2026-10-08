@@ -2,11 +2,11 @@
 
 Web adresi `/admin`. Mağaza paneli `/studio` ayrı kalır. Mobilde `/admin` keşfete yönlenir. Yerel web sunucusu şu anda 8082 portundadır.
 
-Genel bakış gerçek kullanıcı, mağaza, ürün, demo sipariş ve beğeni sayılarını gösterir. Aylık UTC AI harcaması ve devam eden işler için ayrılan bütçe ayrı gösterilir. Kullanıcılar, mağazalar, ürünler, siparişler, AI işleri ve işlem geçmişi 30 kayıtlık sayfalama ve sunucu taraflı arama kullanır. Siparişler yalnızca liste görünümündedir; gerçek ödeme, kargo/iade yönetimi bu sürümde yoktur. Kullanıcı şikâyet toplama ve şikâyet kuyruğu henüz eklenmedi.
+Genel bakış gerçek kullanıcı, mağaza, ürün, demo sipariş ve beğeni sayılarını gösterir. Aylık UTC AI harcaması ve devam eden işler için ayrılan bütçe ayrı gösterilir. Kullanıcılar, mağazalar, ürünler, siparişler, AI işleri ve işlem geçmişi 30 kayıtlık sayfalama ve sunucu taraflı arama kullanır. Siparişlerde mağaza bazında manuel kargo yönetimi vardır. Gerçek ödeme ve ödeme iadesi yoktur. Şikâyetler bölümü ürün, mağaza ve bildirilen mesaj incelemelerini içerir.
 
 ## Yetkilendirme
 
-`006_admin.sql` yönetici rolleri, hesap/ürün moderasyonu ve işlem günlüğünü özel `swipe` şemasına ekler. Her admin isteği mevcut Bearer oturumu ve veritabanındaki `admin_roles` kaydıyla doğrulanır. İstemci rol atayamaz. Şifre hash'leri, oturum anahtarları ve özel DM metinleri panel uçlarına dahil edilmez. Hassas yanıtlar `no-store` kullanır.
+`006_admin.sql` yönetici rolleri, hesap/ürün moderasyonu ve işlem günlüğünü özel `swipe` şemasına ekler. Her admin isteği mevcut Bearer oturumu ve veritabanındaki `admin_roles` kaydıyla doğrulanır. İstemci rol atayamaz. Şifre hash'leri, oturum anahtarları panel uçlarına dahil edilmez. Özel sohbetler listelenmez; yalnızca katılımcının açıkça bildirdiği tek mesaj şikâyet kaydında incelemeye açılır. Hassas yanıtlar `no-store` kullanır.
 
 Yalnızca önceden oluşturulmuş bir hesaba güvenilir sunucu terminalinden rol verilir:
 

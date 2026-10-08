@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Platform, Pressable, Share, StyleSheet, Text, useWindowDimensions, View, type ViewToken } from 'react-native';
-import { usePathname } from 'expo-router';
+import { usePathname, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { money, type Product } from '../../shared/types';
 import { useStore, type SwipeReceipt } from '../lib/store';
@@ -121,7 +121,7 @@ export default function Discover() {
         <Button title="Neden bunu görüyorum?" outline onPress={() => setShowReason(value => !value)} />
         <Reveal open={showReason}><View style={{ gap: 8 }}><Text accessibilityLiveRegion="polite" style={{ color: '#F4F5F6', fontSize: 15, lineHeight: 23 }}>{options && feed.reasons[options.id]?.text || 'Farklı parçalar keşfetmen için bu seçkiye eklendi.'}</Text><Text style={{ color: '#969BA3', fontSize: 12, lineHeight: 18 }}>Açıklama bu seçkinin hazırlandığı ana aittir. Etkileşimlerin sonraki önerileri şekillendirir; özel mesajların okunmaz.</Text></View></Reveal>
         {options && <FollowButton shop={{ id: options.sellerId, name: options.shop, bio: '' }} />}
-        <Button title="İlgilenmiyorum" outline loading={hiding} onPress={() => hide('product')} />
+        <Button title="Ürünü bildir" outline onPress={()=>{const id=options?.id;setOptions(null);if(id)router.push({pathname:'/report',params:{kind:'product',targetId:id}});}}/><Button title="İlgilenmiyorum" outline loading={hiding} onPress={() => hide('product')} />
         <Button title="Bu mağazayı gösterme" outline disabled={hiding} onPress={() => hide('seller')} />
         <Button title="Vazgeç" onPress={() => setOptions(null)} />
       </View>
